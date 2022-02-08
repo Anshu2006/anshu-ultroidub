@@ -4,15 +4,16 @@
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
+
 """
 ✘ Commands Available -
 
 • `{i}ul <path/to/file>`
-    Upload file to telegram chat.
-    You Can Upload Folders too.
-
-• `{i}ul <path/to/file> (| stream)`
-    Upload files as stream.
+    Upload files on telegram.
+    Use following arguments before or after filename as per requirement:
+      `--allow-stream` to upload as stream.
+      `--delete` to delete file after uploading.
+      `--no-thumb` to upload without thumbnail.
 
 • `{i}dl <filename(optional)>`
     Reply to file to download.
@@ -20,36 +21,33 @@
 • `{i}download <DDL> (| filename)`
     Download using DDL. Will autogenerate filename if not given.
 """
+
 import asyncio
-import glob
 import os
 import time
 from datetime import datetime as dt
 
 from aiohttp.client_exceptions import InvalidURL
-from pyUltroid.functions.tools import metadata
+from pyUltroid.functions.helper import time_formatter
+from pyUltroid.functions.tools import set_attributes
 from telethon.errors.rpcerrorlist import MessageNotModifiedError
-from telethon.tl.types import DocumentAttributeAudio, DocumentAttributeVideo
 
 from . import (
-    LOGS,
     downloader,
     eor,
     fast_download,
     get_string,
-    humanbytes,
     progress,
     time_formatter,
     ultroid_cmd,
-    uploader,
 )
 
 
 @ultroid_cmd(
-    pattern="download ?(.*)",
+    pattern="download( (.*)|$)",
 )
 async def down(event):
-    matched = event.pattern_match.group(1)
+    matched = event.pattern_match.group(1).strip()
     msg = await event.eor(get_string("udl_4"))
     if not matched:
         return await eor(msg, get_string("udl_5"), time=5)
@@ -80,7 +78,7 @@ async def down(event):
 
 
 @ultroid_cmd(
-    pattern="dl ?(.*)",
+    pattern="dl( (.*)|$)",
 )
 async def download(event):
     if not event.reply_to_msg_id:
@@ -95,7 +93,7 @@ async def download(event):
         if hasattr(ok.media, "document"):
             file = ok.media.document
             mime_type = file.mime_type
-            filename = event.pattern_match.group(1) or ok.file.name
+            filename = event.pattern_match.group(1).strip() or ok.file.name
             if not filename:
                 if "audio" in mime_type:
                     filename = "audio_" + dt.now().isoformat("_", "seconds") + ".ogg"
@@ -133,13 +131,93 @@ async def download(event):
 
 
 @ultroid_cmd(
-    pattern="ul ?(.*)",
+    pattern="ul( (.*)|$)",
+)
+async def _(event):
+    if len(event.text) >= 8:
+        if "ultroid" in event.text[:7]:
+            return
+    msg = await event.eor(get_string("com_1"))
+    match = event.pattern_match.group(1)
+    if match:
+        match = match.strip()
+    stream, force_doc, delete, thumb = (
+        False,
+        True,
+        False,
+        "resources/extras/ultroid.jpg",
+    )
+    if "--allow-stream" in match:
+        stream = True
+        force_doc = False
+    if "--delete" in match:
+        delete = True
+    if "--no-thumb" in match:
+        thumb = None
+    arguments = ["--allow-stream", "--delete", "--no-thumb"]
+    if any(item in match for item in arguments):
+        match = (
+            match.replace("--allow-stream", "")
+            .replace("--delete", "")
+            .replace("--no-thumb", "")
+            .strip()
+        )
+    if not os.path.exists(match):
+        return await msg.eor("`File doesn't exist or path is incorrect!`")
+    if os.path.isdir(match):
+        c, s = 0, 0
+        for files in sorted(os.listdir(match)):
+            attributes = None
+            if stream:
+                attributes = await set_attributes(files)
+            try:
+                file, _ = await event.client.fast_uploader(
+                    match + "/" + files, show_progress=True, event=msg, to_delete=delete
+                )
+                await event.client.send_file(
+                    event.chat_id,
+                    file,
+                    supports_streaming=stream,
+                    force_document=force_doc,
+                    thumb=thumb,
+                    attributes=attributes,
+                    caption=f"`Uploaded` `{match}/{files}` `in {time_formatter(_*1000)}`",
+                    reply_to=event.reply_to_msg_id or event,
+                )
+                s += 1
+            except (ValueError, IsADirectoryError):
+                c += 1
+        return await msg.eor(f"`Uploaded {s} files, failed to upload {c}.`")
+    attributes = None
+    if stream:
+        attributes = await set_attributes(match)
+    file, _ = await event.client.fast_uploader(
+        match, show_progress=True, event=msg, to_delete=delete
+    )
+    await event.client.send_file(
+        event.chat_id,
+        file,
+        supports_streaming=stream,
+        force_document=force_doc,
+        thumb=thumb,
+        attributes=attributes,
+        caption=f"`Uploaded` `{match}` `in {time_formatter(_*1000)}`",
+        reply_to=event.reply_to_msg_id or event,
+    )
+    await msg.try_delete()
+
+
+"""
+
+
+@ultroid_cmd(
+    pattern="ul( (.*)|$)",
 )
 async def download(event):
     if event.text[1:].startswith("ultroid"):
         return
     xx = await event.eor(get_string("com_1"))
-    hmm = event.pattern_match.group(1)
+    hmm = event.pattern_match.group(1).strip()
     try:
         kk = hmm.split(" | stream")[0]
     except BaseException:
@@ -308,3 +386,4 @@ async def download(event):
         )
     else:
         await xx.eor(f"Uploaded `{ko}` in `{t}`")
+"""

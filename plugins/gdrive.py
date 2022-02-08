@@ -38,11 +38,11 @@ GDrive = GDriveManager()
 
 
 @ultroid_cmd(
-    pattern="gdown ?(.*)",
+    pattern="gdown( (.*)|$)",
     fullsudo=True,
 )
 async def gdown(event):
-    match = event.pattern_match.group(1)
+    match = event.pattern_match.group(1).strip()
     if not match:
         return await eod(event, "`Give file id or Gdrive link to download from!`")
     filename = match.split(" | ")[1].strip() if " | " in match else None
@@ -95,39 +95,38 @@ async def files(event):
 
 
 @ultroid_cmd(
-    pattern="gdul ?(.*)",
+    pattern="gdul( (.*)|$)",
     fullsudo=True,
 )
 async def _(event):
     if not os.path.exists(GDrive.token_file):
         return await eod(event, get_string("gdrive_6").format(asst.me.username))
-    input_file = event.pattern_match.group(1) or await event.get_reply_message()
+    input_file = event.pattern_match.group(1).strip() or await event.get_reply_message()
     if not input_file:
         return await eod(event, "`Reply to file or give its location.`")
     mone = await event.eor(get_string("com_1"))
     if isinstance(input_file, Message):
         location = "resources/downloads"
-        filename = input_file.file.name
-        if not filename:
-            filename = str(round(time.time()))
-        filename = location + "/" + filename
-        try:
-            filename, downloaded_in = await event.client.fast_downloader(
-                file=input_file.media.document,
-                filename=filename,
-                show_progress=True,
-                event=mone,
-                message=get_string("com_5"),
-            )
-            filename = filename.name
-        except AttributeError:
-            start_time = time.time()
-            filename = await event.client.download_media(location, input_file.media)
-            downloaded_in = time.time() - start_time
-        except Exception as e:
-            return await eor(mone, str(e), time=10)
+        if input_file.photo:
+            filename = await input_file.download_media(location)
+        else:
+            filename = input_file.file.name
+            if not filename:
+                filename = str(round(time.time()))
+            filename = location + "/" + filename
+            try:
+                filename, downloaded_in = await event.client.fast_downloader(
+                    file=input_file.media.document,
+                    filename=filename,
+                    show_progress=True,
+                    event=mone,
+                    message=get_string("com_5"),
+                )
+                filename = filename.name
+            except Exception as e:
+                return await eor(mone, str(e), time=10)
         await mone.edit(
-            f"`Downloaded to ``{filename}`` in {time_formatter(downloaded_in*1000)}.`",
+            f"`Downloaded to ``{filename}`.`",
         )
     else:
         filename = input_file.strip()
@@ -172,13 +171,13 @@ async def _(event):
 
 
 @ultroid_cmd(
-    pattern="gdsearch ?(.*)",
+    pattern="gdsearch( (.*)|$)",
     fullsudo=True,
 )
 async def _(event):
     if not os.path.exists(GDrive.token_file):
         return await event.eor(get_string("gdrive_6").format(asst.me.username))
-    input_str = event.pattern_match.group(1)
+    input_str = event.pattern_match.group(1).strip()
     if not input_str:
         return await event.eor("`Give filename to search on GDrive...`")
     eve = await event.eor(f"`Searching for {input_str} in G-Drive...`")
@@ -216,13 +215,13 @@ async def _(event):
 
 """
 @ultroid_cmd(
-    pattern="udir ?(.*)",
+    pattern="udir( (.*)|$)",
     fullsudo=True,
 )
 async def _(event):
     if not os.path.exists(TOKEN_FILE):
         return await event.eor(get_string("gdrive_6").format(asst.me.username), time=5)
-    input_str = event.pattern_match.group(1)
+    input_str = event.pattern_match.group(1).strip()
     if not os.path.isdir(input_str):
         return await event.eor(f"Directory {input_str} does not seem to exist", time=5)
 

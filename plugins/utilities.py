@@ -215,7 +215,7 @@ async def stats(
     await ok.edit(response)
 
 
-@ultroid_cmd(pattern="paste ?(.*)", manager=True, allow_all=True)
+@ultroid_cmd(pattern="paste( (.*)|$)", manager=True, allow_all=True)
 async def _(event):
     try:
         input_str = event.text.split(maxsplit=1)[1]
@@ -263,11 +263,11 @@ async def _(event):
 
 
 @ultroid_cmd(
-    pattern="info ?(.*)",
+    pattern="info( (.*)|$)",
     manager=True,
 )
 async def _(event):
-    match = event.pattern_match.group(1)
+    match = event.pattern_match.group(1).strip()
     if match:
         try:
             user = await event.client.parse_id(match)
@@ -322,7 +322,7 @@ async def _(event):
         dc_id = user.photo.dc_id
     else:
         dc_id = "Need a Profile Picture to check this"
-    caption = """<b>Exᴛʀᴀᴄᴛᴇᴅ Dᴀᴛᴀʙᴀsᴇ Fʀᴏᴍ Tᴇʟᴇɢʀᴀᴍ's Dᴀᴛᴀʙᴀsᴇ<b>
+    caption = """<b>Exᴛʀᴀᴄᴛᴇᴅ Dᴀᴛᴀ Fʀᴏᴍ Tᴇʟᴇɢʀᴀᴍ's Dᴀᴛᴀʙᴀsᴇ<b>
 <b>••Tᴇʟᴇɢʀᴀᴍ ID</b>: <code>{}</code>
 <b>••Pᴇʀᴍᴀɴᴇɴᴛ Lɪɴᴋ</b>: <a href='tg://user?id={}'>Click Here</a>
 <b>••Fɪʀsᴛ Nᴀᴍᴇ</b>: <code>{}</code>
@@ -366,12 +366,12 @@ async def _(event):
 
 
 @ultroid_cmd(
-    pattern="invite ?(.*)",
+    pattern="invite( (.*)|$)",
     groups_only=True,
 )
 async def _(ult):
     xx = await ult.eor(get_string("com_1"))
-    to_add_users = ult.pattern_match.group(1)
+    to_add_users = ult.pattern_match.group(1).strip()
     if not ult.is_channel and ult.is_group:
         for user_id in to_add_users.split(" "):
             try:
@@ -400,25 +400,31 @@ async def _(ult):
 
 
 @ultroid_cmd(
-    pattern=r"rmbg$",
+    pattern="rmbg($| (.*))",
 )
 async def abs_rmbg(event):
     RMBG_API = udB.get_key("RMBG_API")
     if not RMBG_API:
-        return await eor(
-            event,
+        return await event.eor(
             "Get your API key from [here](https://www.remove.bg/) for this plugin to work.",
         )
-    if not event.reply_to_msg_id:
+    match = event.pattern_match.group(1).strip()
+    reply = await event.get_reply_message()
+    if match and os.path.exists(match):
+        dl = match
+    elif reply and reply.media:
+        if reply.document and reply.document.thumbs:
+            dl = await reply.download_media(thumb=-1)
+        else:
+            dl = await reply.download_media()
+    else:
         return await eod(
             event, f"Use `{HNDLR}rmbg` as reply to a pic to remove its background."
         )
-    reply = await event.get_reply_message()
-    dl = await event.client.download_media(reply.media)
-    if not dl.endswith(("webp", "jpg", "png", "jpeg")):
+    if not (dl and dl.endswith(("webp", "jpg", "png", "jpeg"))):
         os.remove(dl)
         return await event.eor(get_string("com_4"))
-    if mediainfo(reply.media) == "sticker":
+    if dl.endswith("webp"):
         file = dl + ".png"
         Image.open(dl).save(file)
         os.remove(dl)
@@ -428,7 +434,7 @@ async def abs_rmbg(event):
     os.remove(dl)
     if not dn:
         dr = out["errors"][0]
-        de = dr["detail"] if dr.get("detail") else ""
+        de = dr.get("detail", "")
         return await xx.edit(
             f"**ERROR ~** `{dr['title']}`,\n`{de}`",
         )
@@ -450,10 +456,10 @@ async def abs_rmbg(event):
 
 
 @ultroid_cmd(
-    pattern="telegraph ?(.*)",
+    pattern="telegraph( (.*)|$)",
 )
 async def telegraphcmd(event):
-    match = event.pattern_match.group(1) or "Ultroid"
+    match = event.pattern_match.group(1).strip() or "Ultroid"
     reply = await event.get_reply_message()
     if not reply:
         return await event.eor("`Reply to Message.`")
@@ -515,7 +521,7 @@ async def _(event):
         await event.eor(f"```{the_real_message}```")
 
 
-@ultroid_cmd(pattern="suggest ?(.*)", manager=True)
+@ultroid_cmd(pattern="suggest( (.*)|$)", manager=True)
 async def sugg(event):
     sll = event.text.split(maxsplit=1)
     try:
@@ -547,7 +553,7 @@ async def sugg(event):
     await event.delete()
 
 
-@ultroid_cmd(pattern="ipinfo ?(.*)")
+@ultroid_cmd(pattern="ipinfo( (.*)|$)")
 async def ipinfo(event):
     ip = event.text.split()
     ipaddr = ""

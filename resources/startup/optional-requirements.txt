@@ -25,6 +25,7 @@ opencv-python-headless
 pillow>=7.0.0
 profanitydetector
 psutil==5.8.0
+psycopg2-binary
 pygments
 pymongo[srv]
 pypdf2==1.26.0
@@ -38,4 +39,6 @@ telegraph
 tgcrypto
 youtube-search-python>=1.4.9
 pygments
+python-Levenshtein
+fuzzywuzzy
 # -------------------------------------------------------#
